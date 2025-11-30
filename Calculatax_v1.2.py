@@ -17,11 +17,14 @@ class TaxCalculatorApp(tk.Tk):
         self.bind_events()
 
     def setup_tax_rates(self):
-        self.ppn_rates = {'barang tidak mewah (11%)': 0.11, 'barang mewah (12%)': 0.12}
+        self.ppn_rates = {'Barang tidak mewah (11%)': 0.11, 'Barang mewah (12%)': 0.12}
         self.ppnbm_rates = {
-            'hunian mewah (20%)': 0.20, 'balon udara (40%)': 0.40, 'pesawat udara (40%)': 0.40,
-            'peluru dan senjata api (40%)': 0.40, 'helikopter (50%)': 0.50, 'pesawat udara lainnya (50%)': 0.50,
-            'senjata peledak (50%)': 0.50, 'kapal pesiar (75%)': 0.75, 'yacht (75%)': 0.75
+            'Sedan 1500-3.000 Cc (20%)': 0.20, 'Sedan > 3000Cc (40%)': 0.40,
+            'Suv 1500-3000 Cc (25%)': 0.25, 'Suv > 3000 Cc (50%)': 0.50,
+            'Motor Mewah 250-500 Cc (60%)': 0.60, 'Kendaraan Khusus Salju Dsb': 0.60, 'Trailer Mewah (95%)': 0.95,
+            'Hunian Mewah (20%)': 0.20, 'Balon Udara (40%)': 0.40, 'Pesawat Udara (40%)': 0.40,
+            'Peluru Dan Senjata Api (40%)': 0.40, 'Helikopter (50%)': 0.50, 'Pesawat Udara Lainnya (50%)': 0.50,
+            'Senjata Peledak (50%)': 0.50, 'Kapal Pesiar (75%)': 0.75, 'Yacht (75%)': 0.75
         }
         self.pph23_rates = {
             'jasa': (0.02, 0.04), 'dividen': (0.15, 0.30), 'bunga': (0.15, 0.30),
@@ -88,8 +91,11 @@ class TaxCalculatorApp(tk.Tk):
             self.npwp.config(state="readonly")
 
     def on_category_change(self, event):
+        tax = self.tax_type.get()
         cat = self.category.get()
-        if cat in ['Fintech Dalam Negeri', 'Fintech Luar Negeri']:
+        if tax in ['PPN', 'PPnBM']:
+            self.npwp.config(state="disabled")
+        elif cat in ['Fintech Dalam Negeri', 'Fintech Luar Negeri']:
             self.npwp.config(state="disabled")
         else:
             self.npwp.config(state="readonly")
@@ -98,23 +104,25 @@ class TaxCalculatorApp(tk.Tk):
         try:
             tax_type = self.tax_type.get()
             amount = float(self.amount_var.get().replace(',', ''))
-            category = self.category.get().lower()
             self.result.delete(1.0, tk.END)
 
             if tax_type == 'PPN': #PPN
+                category = self.category.get()
                 rate = self.ppn_rates[category]
                 tax = amount * rate
                 final = amount + tax
                 rate_pct = f"{int(rate*100)}%"
-                output = f"Jenis Pajak: {tax_type}\nKategori: {self.category.get()}\nNilai DPP: Rp{amount:,.0f}\nPPN ({rate_pct}): Rp{tax:,.0f}\nNilai Akhir: Rp{final:,.0f}\n"
+                output = f"Jenis Pajak: {tax_type}\nKategori: {category}\nNilai DPP: Rp{amount:,.0f}\nPPN ({rate_pct}): Rp{tax:,.0f}\nNilai Akhir: Rp{final:,.0f}\n"
             elif tax_type == 'PPnBM': #PPnBM
+                category = self.category.get()
                 rate = self.ppnbm_rates[category]
                 ppnbm = amount * rate
                 ppn = 0.12 * (amount - ppnbm)
                 final = amount + ppn + ppnbm
                 rate_pct = f"{int(rate*100)}%"
-                output = f"Jenis Pajak: {tax_type}\nKategori: {self.category.get()}\nNilai DPP: Rp{amount:,.0f}\nPPN (12%): Rp{ppn:,.0f}\nPPnBM ({rate_pct}): Rp{ppnbm:,.0f}\nNilai Akhir: Rp{final:,.0f}\n"
+                output = f"Jenis Pajak: {tax_type}\nKategori: {category}\nNilai DPP: Rp{amount:,.0f}\nPPN (12%): Rp{ppn:,.0f}\nPPnBM ({rate_pct}): Rp{ppnbm:,.0f}\nNilai Akhir: Rp{final:,.0f}\n"
             else:  # PPh 23
+                category = self.category.get().lower()
                 if category == 'fintech dalam negeri':
                     tax, rate = amount * 0.15, 0.15
                 elif category == 'fintech luar negeri':
