@@ -1,0 +1,36 @@
+{
+    "ppn_rates": {
+        "Barang tidak mewah (11%)": 0.11,
+        "Barang mewah (12%)": 0.12
+    },
+    "ppnbm_rates": {
+        "Sedan 1500-3.000 Cc (20%)": 0.20,
+        "Sedan > 3000Cc (40%)": 0.40,
+        "Suv 1500-3000 Cc (25%)": 0.25,
+        "Suv > 3000 Cc (50%)": 0.50,
+        "Motor Mewah 250-500 Cc (60%)": 0.60,
+        "Kendaraan Khusus Salju Dsb": 0.60,
+        "Trailer Mewah (95%)": 0.95,
+        "Hunian Mewah (20%)": 0.20,
+        "Balon Udara (40%)": 0.40,
+        "Pesawat Udara (40%)": 0.40,
+        "Peluru Dan Senjata Api (40%)": 0.40,
+        "Helikopter (50%)": 0.50,
+        "Pesawat Udara Lainnya (50%)": 0.50,
+        "Senjata Peledak (50%)": 0.50,
+        "Kapal Pesiar (75%)": 0.75,
+        "Yacht (75%)": 0.75
+    },
+    "pph23_rates": {
+        "Jasa": [0.02, 0.04],
+        "Dividen": [0.15, 0.30],
+        "Bunga": [0.15, 0.30],
+        "Royalti": [0.15, 0.30],
+        "Hadiah": [0.15, 0.50],
+        "Sewa": [0.02, 0.02]
+    },
+    "fintech_rates": {
+        "fintech dalam negeri": 0.15,
+        "fintech luar negeri": 0.20
+    }
+}
