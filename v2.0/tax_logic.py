@@ -79,11 +79,14 @@ class TaxLogic:
         if amount < 0:
             raise ValueError("Input amount cannot be negative.")
         # 1. Determine the tax rate first
+        base_rate = 0
         if category in self.rates['fintech_rates']:
-            rate = self.rates['fintech_rates'][category]
+            base_rate = self.rates['fintech_rates'][category]
         else:
-            rates = self.rates['pph23_rates'][category]
-            rate = rates[0] if has_npwp else rates[1]
+            base_rate = self.rates['pph23_rates'][category][0] # Base rate is the first one
+
+        # Apply NPWP sanction if required and not present
+        rate = base_rate * 2 if self.is_npwp_required(category) and not has_npwp else base_rate
             
         # 2. Determine DPP and taxes based on calculation type
         if is_gross_up and include_ppn:
@@ -105,7 +108,13 @@ class TaxLogic:
             final_amount = dpp_for_pph + ppn
             
             # For display purposes, the returned DPP is the original nominal amount.
-            dpp = dpp_for_ppn
+            # We return both DPPs for clarity in the UI.
+            return {
+                "dpp": dpp_for_ppn, # DPP for PPN
+                "dpp_gross_up": dpp_for_pph, # DPP for PPh 23
+                "rate": rate, "tax": tax, "final_amount": final_amount, "ppn_rate": ppn_rate,
+                "ppn": ppn, "is_gross_up": is_gross_up, "net_amount_input": amount
+            }
         else:
             # Standard logic for all other cases.
             if is_gross_up:
@@ -125,8 +134,8 @@ class TaxLogic:
                 # If PPN is included, the final amount is the total outlay for the payer.
                 final_amount = dpp + ppn
             else:
-                # If no PPN, the final amount is the net received by the payee.
-                final_amount = dpp - tax
+                # If gross-up, final_amount is the total cost (dpp). Otherwise, it's the net received by the payee.
+                final_amount = dpp if is_gross_up else dpp - tax
         
         return {
             "dpp": dpp,

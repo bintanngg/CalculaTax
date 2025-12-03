@@ -1,15 +1,13 @@
-# Calculatax_v1.2.2.py
+# ui.py
 '''
-CalculaTax v.1.2.2
-This is a python script for calculating Tax based on regulations in Indonesia
-Refactored to separate business logic from UI.
-Made by Bintang, Refactored by Gemini.
+UI Module for CalculaTax
+This module contains the main UI class for the tax calculator.
 '''
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-import os # Import the os module
-from tax_logic import TaxLogic # Import the new logic class
+import os
+from tax_logic import TaxLogic
 
 # --- Constants to avoid "magic strings" ---
 TAX_PPH23 = 'PPh 23'
@@ -76,6 +74,18 @@ class TaxCalculatorApp(tk.Tk):
         self.amount_entry = tk.Entry(frame, textvariable=self.amount_var)
         self.amount_entry.grid(row=3, column=1, padx=10, pady=2)
 
+        # --- PPN Option ---
+        self.include_ppn_var = tk.BooleanVar()
+        self.ppn_checkbox = tk.Checkbutton(self, text="Sertakan PPN 11%", 
+                                           variable=self.include_ppn_var)
+        self.ppn_checkbox.pack(pady=5)
+        
+        # --- Gross Up Option ---
+        self.gross_up_var = tk.BooleanVar()
+        self.gross_up_checkbox = tk.Checkbutton(self, text="Gross Up PPh",
+                                                variable=self.gross_up_var)
+        self.gross_up_checkbox.pack(pady=5)
+        
         # --- Action & Result ---
         tk.Button(self, text="Hitung Pajak", command=self.calculate, font=("Arial", 12)).pack(pady=10)
         tk.Label(self, text="Hasil Perhitungan:", font=("Arial", 12, "bold")).pack(pady=5)
@@ -98,21 +108,36 @@ class TaxCalculatorApp(tk.Tk):
         else:
             self.category_combo.set("")
         
-        self.update_npwp_state()
+        self._update_dependent_widgets()
 
     def on_category_change(self, event=None):
         """Handles changes in the category selection."""
-        self.update_npwp_state()
+        self._update_dependent_widgets()
 
-    def update_npwp_state(self):
-        """Enables or disables the NPWP combobox based on context."""
+    def _update_dependent_widgets(self):
+        """Enables or disables dependent widgets like NPWP and PPN checkbox."""
         tax_type = self.tax_type_var.get()
-        category = self.category_var.get().lower()
+        category = self.category_var.get()
 
-        if tax_type == TAX_PPH23 and category not in ["fintech dalam negeri", "fintech luar negeri"]:
+        # Manage NPWP combo box state
+        if tax_type == TAX_PPH23 and self.tax_logic.is_npwp_required(category):
             self.npwp_combo.config(state="readonly")
         else:
             self.npwp_combo.config(state="disabled")
+            
+        # Manage "Include PPN" checkbox state
+        if tax_type == TAX_PPH23:
+            self.ppn_checkbox.config(state="normal")
+        else:
+            self.ppn_checkbox.config(state="disabled")
+            self.include_ppn_var.set(False)
+
+        # Manage "Gross Up" checkbox state
+        if tax_type == TAX_PPH23:
+            self.gross_up_checkbox.config(state="normal")
+        else:
+            self.gross_up_checkbox.config(state="disabled")
+            self.gross_up_var.set(False)
 
     def calculate(self):
         """
@@ -129,14 +154,16 @@ class TaxCalculatorApp(tk.Tk):
             amount = float(amount_str)
 
             has_npwp = self.npwp_var.get() == NPWP_HAVE
-            
+            include_ppn = self.include_ppn_var.get()
+            is_gross_up = self.gross_up_var.get()
+
             result_data = None
             if tax_type == TAX_PPN:
                 result_data = self.tax_logic.calculate_ppn(amount, category)
             elif tax_type == TAX_PPNBM:
                 result_data = self.tax_logic.calculate_ppnbm(amount, category)
             elif tax_type == TAX_PPH23:
-                result_data = self.tax_logic.calculate_pph23(amount, category, has_npwp)
+                result_data = self.tax_logic.calculate_pph23(amount, category, has_npwp, include_ppn, is_gross_up)
             
             output_string = self.format_output(tax_type, category, result_data)
             self.display_result(output_string)
@@ -152,7 +179,15 @@ class TaxCalculatorApp(tk.Tk):
         """Formats the result data dictionary into a display string."""
         if not data:
             return "Perhitungan tidak dapat dilakukan."
-            
+        
+        # Get original amount from the entry field for clarity
+        original_amount_str = self.amount_var.get()
+        try:
+            original_amount = float(original_amount_str.replace(',', ''))
+            nominal_awal_str = f"Nominal Awal: Rp{original_amount:,.0f}"
+        except ValueError:
+            nominal_awal_str = "Nominal Awal: (Invalid)"
+
         dpp_str = f"Nilai DPP: Rp{data['dpp']:,.0f}"
         final_str = f"Nilai Akhir: Rp{data['final_amount']:,.0f}"
         
@@ -171,7 +206,17 @@ class TaxCalculatorApp(tk.Tk):
         elif tax_type == TAX_PPH23:
             rate_pct = f"{data['rate']:.0%}"
             tax_str = f"PPh 23 ({rate_pct}): Rp{data['tax']:,.0f}"
-            return f"Jenis Pajak: {tax_type}\nKategori: {category.capitalize()}\n{dpp_str}\n{tax_str}\n{final_str}"
+            
+            # Check if PPN was part of the calculation
+            if 'ppn' in data and data['ppn'] > 0:
+                ppn_rate_pct = f"{data['ppn_rate']:.0%}"
+                ppn_str = f"PPN ({ppn_rate_pct}): Rp{data['ppn']:,.0f}"
+                return (f"Jenis Pajak: {tax_type}\nKategori: {category}\n"
+                        f"{nominal_awal_str} (Termasuk PPN)\n"
+                        f"{dpp_str}\n{ppn_str}\n{tax_str}\n{final_str}")
+            else:
+                return (f"Jenis Pajak: {tax_type}\nKategori: {category}\n"
+                        f"{dpp_str}\n{tax_str}\n{final_str}")
             
         return "Jenis pajak tidak dikenal."
 
@@ -179,8 +224,3 @@ class TaxCalculatorApp(tk.Tk):
         """Clears and inserts text into the result widget."""
         self.result_text.delete(1.0, tk.END)
         self.result_text.insert(tk.END, text)
-
-# --- Application Entry Point ---
-if __name__ == "__main__":
-    app = TaxCalculatorApp()
-    app.mainloop()
